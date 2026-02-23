@@ -127,13 +127,13 @@
 .tonearm::before {
   content: "";
   position: absolute;
-  right: 46px;
-  top: 44px;
-  width: 244px;
+  right: 42px;
+  top: 42px;
+  width: 138px;
   height: 10px;
   border-radius: 999px;
   transform-origin: right center;
-  transform: rotate(146deg);
+  transform: rotate(-33deg);
   background:
     linear-gradient(180deg, #eef1f4 0%, #b7bcc4 34%, #8a909a 58%, #d8dde4 100%),
     repeating-linear-gradient(
@@ -172,13 +172,13 @@
 
 .tonearm-arm {
   position: absolute;
-  right: 30px;
-  top: 30px;
-  width: 48px;
+  right: 132px;
+  top: 96px;
+  width: 64px;
   height: 12px;
   border-radius: 999px;
   transform-origin: right center;
-  transform: rotate(151deg);
+  transform: rotate(-41deg);
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.35) 42%, rgba(255, 255, 255, 0.02) 100%),
     repeating-linear-gradient(
@@ -199,12 +199,12 @@
 
 .tonearm-head {
   position: absolute;
-  right: 206px;
-  top: 148px;
+  right: 126px;
+  top: 124px;
   width: 56px;
   height: 34px;
   border-radius: 9px;
-  transform: rotate(151deg);
+  transform: rotate(-34deg);
   background:
     radial-gradient(circle at 16px 10px, rgba(245, 246, 249, 0.55) 0 2px, transparent 3px),
     radial-gradient(circle at 23px 22px, rgba(245, 246, 249, 0.52) 0 2px, transparent 3px),
