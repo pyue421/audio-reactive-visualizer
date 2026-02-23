@@ -1,0 +1,77 @@
+:root {
+  --bg: #000000;
+  --text: #1DB954;
+  --muted: #1DB954;
+  --accent: #1DB954;
+  --panel: #1e1e1e;
+  --hud-border: rgba(29, 185, 84, 0.9);
+  --hud-bg: rgba(0, 0, 0, 0.66);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: monospace;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  overflow: auto;
+}
+
+canvas {
+  display: block;
+}
+
+.layout {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 420px minmax(0, 1fr);
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+
+h1 {
+  --text: #ffffff !important;
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: 0.02em;
+}
+
+p {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+button {
+  margin-top: 0.8rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-family: Helvetica;
+  font-size: 0.9rem;
+  color: #0f0f0f;
+  background: var(--accent);
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/addons/p5.sound.min.js"></script>
   </head>
-  <body data-mode="TIME">
+  <body data-mode="LISSAJOUS">
     <main class="layout">
       <section class="player-panel">
         <h1>Audio Reactive Visualizer</h1>
@@ -32,11 +32,10 @@
 
       <section class="visual-panel">
         <div class="scope-stage">
-
           <div class="mode-dock" aria-label="Oscilloscope mode">
             <div class="mode-switch">
-              <a class="mode-btn active" href="index.html">Time</a>
-              <a class="mode-btn" href="lissajous.html">Lissajous</a>
+              <a class="mode-btn" href="index.html">Time</a>
+              <a class="mode-btn active" href="lissajous.html">Lissajous</a>
               <a class="mode-btn" href="polar.html">Polar</a>
             </div>
           </div>
@@ -106,7 +105,7 @@
         </aside>
       </section>
     </main>
-    <script src="time.js"></script>
+    <script src="lissajous.js"></script>
     <script src="sketch.js"></script>
   </body>
 </html>

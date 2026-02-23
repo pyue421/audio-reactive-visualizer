@@ -1,6 +1,7 @@
-let mic;
 let fft;
 let amp;
+let mic = null;
+let micReady = false;
 let running = false;
 
 const smoothing = 0.9;
@@ -10,10 +11,9 @@ let hud = {};
 let detectionState = {};
 let currentMode = "TIME";
 
-const startButton = () => document.getElementById("startButton");
 const statusText = () => document.getElementById("status");
+const playerStatusText = () => document.getElementById("playerStatus");
 const canvasHost = () => document.getElementById("canvasHost");
-const modeButtons = () => [...document.querySelectorAll(".mode-btn")];
 
 function setup() {
   const host = canvasHost();
@@ -21,41 +21,65 @@ function setup() {
   cnv.parent(host);
   textFont("monospace");
 
-  mic = new p5.AudioIn();
   fft = new p5.FFT(smoothing, bins);
   amp = new p5.Amplitude();
 
   initializeHud();
-  initializeModeToggles();
+  initializeModeFromPage();
   resetDetectors();
 
-  startButton().addEventListener("click", initializeAudio);
+  enableMicrophone();
+  window.addEventListener(
+    "pointerdown",
+    () => {
+      if (!micReady) enableMicrophone();
+    },
+    { once: true }
+  );
 }
 
-async function initializeAudio() {
-  if (running) return;
+function initializeModeFromPage() {
+  const mode = (document.body?.dataset?.mode || "TIME").toUpperCase();
+  if (mode === "TIME" || mode === "LISSAJOUS" || mode === "POLAR") {
+    currentMode = mode;
+  }
+}
+
+async function enableMicrophone() {
+  if (!mic) {
+    mic = new p5.AudioIn();
+  }
+
+  if (micReady) {
+    playerStatusText().textContent = "Microphone already enabled.";
+    return true;
+  }
 
   try {
     await userStartAudio();
-    mic.start(
-      () => {
-        fft.setInput(mic);
-        amp.setInput(mic);
-        resetDetectors();
-        running = true;
-        startButton().disabled = true;
-        statusText().textContent = "Listening to microphone input...";
-      },
-      () => {
-        statusText().textContent = "Microphone permission denied.";
-      }
-    );
+    await new Promise((resolve, reject) => {
+      mic.start(
+        () => {
+          micReady = true;
+          resolve();
+        },
+        () => reject(new Error("Microphone permission denied"))
+      );
+    });
+
+    fft.setInput(mic);
+    amp.setInput(mic);
+    playerStatusText().textContent = "Microphone enabled.";
+    return true;
   } catch {
-    statusText().textContent = "Unable to start audio context.";
+    playerStatusText().textContent = "Unable to enable microphone.";
+    return false;
   }
 }
 
 function draw() {
+  running = micReady;
+
   const level = running ? amp.getLevel() : 0;
   const spectrum = running ? fft.analyze() : new Array(bins).fill(0);
   const waveform = running ? fft.waveform(512) : new Array(512).fill(0);
@@ -73,185 +97,51 @@ function draw() {
 }
 
 function drawOscilloscopeBackground() {
-  background(7, 20, 24);
+  background(0, 0, 0);
 
   const majorX = width / 10;
-  const majorY = height / 8;
+  const majorY = height / 5;
 
   strokeWeight(1);
 
   for (let x = 0; x <= width; x += majorX / 2) {
-    const major = Math.abs((x / majorX) - Math.round(x / majorX)) < 0.01;
-    stroke(major ? color(35, 105, 106, 165) : color(28, 72, 75, 85));
+    const major = Math.abs(x / majorX - Math.round(x / majorX)) < 0.01;
+    stroke(major ? color(255, 255, 255, 120) : color(255, 255, 255, 46));
     line(x, 0, x, height);
   }
 
   for (let y = 0; y <= height; y += majorY / 2) {
-    const major = Math.abs((y / majorY) - Math.round(y / majorY)) < 0.01;
-    stroke(major ? color(35, 105, 106, 165) : color(28, 72, 75, 85));
+    const major = Math.abs(y / majorY - Math.round(y / majorY)) < 0.01;
+    stroke(major ? color(255, 255, 255, 120) : color(255, 255, 255, 46));
     line(0, y, width, y);
   }
 
-  stroke(70, 190, 180, 185);
+  stroke(255, 255, 255, 205);
   strokeWeight(1.2);
   line(width * 0.5, 0, width * 0.5, height);
   line(0, height * 0.5, width, height * 0.5);
 
   noFill();
-  stroke(42, 140, 136, 120);
+  stroke(255, 255, 255, 110);
   strokeWeight(2);
   rect(6, 6, width - 12, height - 12, 4);
 }
 
 function drawOscilloscopeTrace(waveform, level, bassRaw, midRaw, trebleRaw) {
-  if (currentMode === "LISSAJOUS") {
-    drawLissajousTrace(waveform, level, bassRaw, midRaw, trebleRaw);
-    return;
+  if (typeof window.renderModeTrace === "function") {
+    window.renderModeTrace(waveform, level, bassRaw, midRaw, trebleRaw);
   }
-  if (currentMode === "POLAR") {
-    drawPolarTrace(waveform, level, bassRaw, midRaw, trebleRaw);
-    return;
-  }
-  drawTimeTrace(waveform, level, bassRaw, midRaw, trebleRaw);
-}
-
-function drawTimeTrace(waveform, level, bassRaw, midRaw, trebleRaw) {
-  const energy = constrain(map(level, 0, 0.4, 0, 1), 0, 1);
-  const bass = bassRaw / 255;
-  const mid = midRaw / 255;
-  const treble = trebleRaw / 255;
-
-  const amplitudeScale = height * (0.18 + bass * 0.28 + mid * 0.12);
-  const jitter = 0.5 + treble * 2.2;
-
-  noFill();
-
-  for (let layer = 0; layer < 3; layer++) {
-    const alpha = 70 + layer * 40 + energy * 70;
-    const weight = 1.4 + layer * 1.8;
-    stroke(70, 255, 212, alpha);
-    strokeWeight(weight);
-
-    beginShape();
-    for (let i = 0; i < waveform.length; i++) {
-      const x = map(i, 0, waveform.length - 1, 14, width - 14);
-      const yBase = height * 0.5 + waveform[i] * amplitudeScale;
-      const phase = frameCount * 0.02 + i * 0.04;
-      const y = yBase + sin(phase) * jitter * (layer - 1);
-      vertex(x, y);
-    }
-    endShape();
-  }
-
-  stroke(160, 255, 235, 255);
-  strokeWeight(2);
-  beginShape();
-  for (let i = 0; i < waveform.length; i++) {
-    const x = map(i, 0, waveform.length - 1, 14, width - 14);
-    const y = height * 0.5 + waveform[i] * amplitudeScale;
-    vertex(x, y);
-  }
-  endShape();
-
-  drawScopeReadout(level, bass, mid, treble);
-}
-
-function drawLissajousTrace(waveform, level, bassRaw, midRaw, trebleRaw) {
-  const energy = constrain(map(level, 0, 0.4, 0, 1), 0, 1);
-  const bass = bassRaw / 255;
-  const mid = midRaw / 255;
-  const treble = trebleRaw / 255;
-  const cx = width * 0.5;
-  const cy = height * 0.5;
-  const scaleX = width * (0.16 + bass * 0.18);
-  const scaleY = height * (0.17 + mid * 0.22);
-  const shift = Math.floor(map(treble, 0, 1, 30, waveform.length * 0.45));
-
-  noFill();
-  for (let layer = 0; layer < 3; layer++) {
-    stroke(70, 255, 212, 80 + layer * 45 + energy * 70);
-    strokeWeight(1.5 + layer * 1.7);
-    beginShape();
-    for (let i = 0; i < waveform.length; i++) {
-      const xVal = waveform[i];
-      const yVal = waveform[(i + shift + layer * 7) % waveform.length];
-      const wobble = sin(frameCount * 0.015 + i * 0.03) * (0.2 + treble * 0.85) * layer;
-      vertex(cx + xVal * scaleX + wobble, cy + yVal * scaleY - wobble);
-    }
-    endShape(CLOSE);
-  }
-
-  stroke(160, 255, 235, 255);
-  strokeWeight(2.1);
-  beginShape();
-  for (let i = 0; i < waveform.length; i++) {
-    const xVal = waveform[i];
-    const yVal = waveform[(i + shift) % waveform.length];
-    vertex(cx + xVal * scaleX, cy + yVal * scaleY);
-  }
-  endShape(CLOSE);
-
-  drawScopeReadout(level, bass, mid, treble);
-}
-
-function drawPolarTrace(waveform, level, bassRaw, midRaw, trebleRaw) {
-  const energy = constrain(map(level, 0, 0.4, 0, 1), 0, 1);
-  const bass = bassRaw / 255;
-  const mid = midRaw / 255;
-  const treble = trebleRaw / 255;
-  const cx = width * 0.5;
-  const cy = height * 0.5;
-  const baseR = min(width, height) * (0.2 + bass * 0.13);
-  const depth = min(width, height) * (0.1 + mid * 0.14);
-  const spin = frameCount * (0.005 + treble * 0.015);
-
-  noFill();
-  for (let layer = 0; layer < 3; layer++) {
-    stroke(70, 255, 212, 78 + layer * 45 + energy * 70);
-    strokeWeight(1.4 + layer * 1.6);
-    beginShape();
-    for (let i = 0; i < waveform.length; i++) {
-      const theta = map(i, 0, waveform.length - 1, 0, TWO_PI) + spin + layer * 0.04;
-      const r = baseR + waveform[i] * depth + sin(theta * (3 + layer) + spin * 3) * (4 + treble * 16);
-      vertex(cx + cos(theta) * r, cy + sin(theta) * r);
-    }
-    endShape(CLOSE);
-  }
-
-  stroke(160, 255, 235, 255);
-  strokeWeight(2.1);
-  beginShape();
-  for (let i = 0; i < waveform.length; i++) {
-    const theta = map(i, 0, waveform.length - 1, 0, TWO_PI) + spin;
-    const r = baseR + waveform[i] * depth;
-    vertex(cx + cos(theta) * r, cy + sin(theta) * r);
-  }
-  endShape(CLOSE);
-
-  drawScopeReadout(level, bass, mid, treble);
 }
 
 function drawScopeReadout(level, bass, mid, treble) {
   noStroke();
-  fill(86, 255, 216, 190);
+  fill(29, 185, 84, 190);
   textAlign(LEFT, BOTTOM);
   textSize(14);
-  text(`${currentMode}  CH1 ${(level * 100).toFixed(2)} mV`, 18, height - 16);
+  text(`${currentMode} CH1 ${(level * 100).toFixed(2)} mV`, 18, height - 16);
 
   textAlign(RIGHT, BOTTOM);
   text(`L ${bass.toFixed(2)}  M ${mid.toFixed(2)}  H ${treble.toFixed(2)}`, width - 18, height - 16);
-}
-
-function initializeModeToggles() {
-  const buttons = modeButtons();
-  for (const btn of buttons) {
-    btn.addEventListener("click", () => {
-      currentMode = btn.dataset.mode || "TIME";
-      for (const other of buttons) {
-        other.classList.toggle("active", other === btn);
-      }
-    });
-  }
 }
 
 function initializeHud() {
@@ -286,28 +176,13 @@ function resetDetectors() {
 }
 
 function drawHud(level, bassRaw, midRaw, trebleRaw, waveform, spectrum) {
-  updateAmplitudePanel(level, bassRaw, midRaw, trebleRaw);
-  updateWaveformPanel(waveform);
-  updateSpectrumPanel(spectrum);
-  updateDetectionsPanel(level, bassRaw, midRaw, trebleRaw, spectrum);
-}
-
-function updateAmplitudePanel(level, bassRaw, midRaw, trebleRaw) {
   setMeter(hud.meterRms, constrain(map(level, 0, 0.45, 0, 1), 0, 1));
   setMeter(hud.meterLow, bassRaw / 255);
   setMeter(hud.meterMid, midRaw / 255);
   setMeter(hud.meterHigh, trebleRaw / 255);
-}
 
-function updateWaveformPanel(waveform) {
   drawWaveformCanvas(hud.waveCanvas, waveform);
-}
-
-function updateSpectrumPanel(spectrum) {
   drawSpectrumCanvas(hud.spectrumCanvas, spectrum);
-}
-
-function updateDetectionsPanel(level, bassRaw, midRaw, trebleRaw, spectrum) {
   updateDetectionText(level, bassRaw, midRaw, trebleRaw, spectrum);
 }
 
@@ -321,8 +196,7 @@ function setupCanvas2D(canvas) {
   const ratio = window.devicePixelRatio || 1;
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
-  const needResize = canvas.width !== Math.floor(w * ratio) || canvas.height !== Math.floor(h * ratio);
-  if (needResize) {
+  if (canvas.width !== Math.floor(w * ratio) || canvas.height !== Math.floor(h * ratio)) {
     canvas.width = Math.floor(w * ratio);
     canvas.height = Math.floor(h * ratio);
   }
@@ -464,14 +338,13 @@ function detectOnset(flux) {
   }
 
   const mean =
-    detectionState.fluxHistory.reduce((sum, value) => sum + value, 0) / Math.max(1, detectionState.fluxHistory.length);
+    detectionState.fluxHistory.reduce((sum, value) => sum + value, 0) / max(1, detectionState.fluxHistory.length);
   const variance =
     detectionState.fluxHistory.reduce((sum, value) => sum + (value - mean) ** 2, 0) /
-    Math.max(1, detectionState.fluxHistory.length);
-  const sigma = Math.sqrt(variance);
+    max(1, detectionState.fluxHistory.length);
+  const sigma = sqrt(variance);
   const adaptiveThreshold = mean + sigma * 1.35 + 0.25;
-  const refractoryMs = 170;
-  const onset = flux > adaptiveThreshold && now - detectionState.lastOnsetMs > refractoryMs;
+  const onset = flux > adaptiveThreshold && now - detectionState.lastOnsetMs > 170;
 
   if (onset) {
     detectionState.lastOnsetMs = now;
@@ -495,30 +368,27 @@ function detectOnset(flux) {
 
 function estimateBpm() {
   if (!detectionState.beatIntervals.length) return null;
-  const avgInterval =
-    detectionState.beatIntervals.reduce((sum, value) => sum + value, 0) / detectionState.beatIntervals.length;
-  return 60000 / avgInterval;
+  const avg = detectionState.beatIntervals.reduce((sum, value) => sum + value, 0) / detectionState.beatIntervals.length;
+  return 60000 / avg;
 }
 
 function updateBeatDot(strength) {
   if (!hud.beatPulseDot) return;
   const s = constrain(strength, 0, 1);
-  const scale = 1 + s * 0.95;
+  hud.beatPulseDot.style.transform = `scale(${(1 + s * 0.95).toFixed(2)})`;
   const alpha = 0.22 + s * 0.78;
-  const blur = 2 + s * 18;
-  hud.beatPulseDot.style.transform = `scale(${scale.toFixed(2)})`;
   hud.beatPulseDot.style.background = `rgba(30, 215, 96, ${alpha.toFixed(3)})`;
-  hud.beatPulseDot.style.boxShadow = `0 0 ${blur.toFixed(1)}px rgba(30, 215, 96, ${alpha.toFixed(3)})`;
+  hud.beatPulseDot.style.boxShadow = `0 0 ${(2 + s * 18).toFixed(1)}px rgba(30, 215, 96, ${alpha.toFixed(3)})`;
 }
 
 function drawIdleMessage() {
   fill(0, 0, 0, 180);
   noStroke();
-  rect(18, height - 72, 244, 46, 8);
-  fill(86, 255, 216, 240);
+  rect(18, height - 72, 340, 46, 8);
+  fill(29, 185, 84, 240);
   textAlign(LEFT, CENTER);
   textSize(14);
-  text("Press Enable Audio to Start", 30, height - 49);
+  text("Allow microphone access to begin", 30, height - 49);
 }
 
 function windowResized() {
