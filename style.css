@@ -1,0 +1,134 @@
+:root {
+  --bg: #e9ecef;
+  --text: #17181c;
+  --muted: #4f5565;
+  --accent: #111;
+  --panel: #ffffff;
+  --line: #d8dce3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  overflow: auto;
+}
+
+canvas {
+  display: block;
+}
+
+.layout {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 420px minmax(0, 1fr);
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+
+.spotify-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.spotify-panel iframe {
+  border-radius: 12px;
+  border: 0;
+  flex: 1;
+  min-height: 420px;
+}
+
+.panel-copy {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.visual-panel {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: linear-gradient(160deg, #f4f5f8 0%, #e4e7ec 45%, #d9dde5 100%);
+}
+
+#canvasHost {
+  width: 100%;
+  height: 100%;
+}
+
+.controls {
+  position: absolute;
+  top: 0.8rem;
+  left: 0.8rem;
+  z-index: 2;
+  max-width: 340px;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid #cfd4dd;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(6px);
+}
+
+h1 {
+  margin: 0;
+  font-size: 2rem;
+  letter-spacing: 0.02em;
+}
+
+p {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+button {
+  margin-top: 0.8rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #fff;
+  background: var(--accent);
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+@media (max-width: 980px) {
+  body {
+    overflow: auto;
+  }
+
+  .layout {
+    height: auto;
+    min-height: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .visual-panel {
+    min-height: 58vh;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+  }
+}
