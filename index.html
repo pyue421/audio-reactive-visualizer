@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Audio-Reactive Visualizer</title>
+    <title>Audio-Reactive Visualizer - Amplitude</title>
     <link rel="stylesheet" href="style.css" />
     <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/addons/p5.sound.min.js"></script>
@@ -26,15 +26,87 @@
       </section>
 
       <section class="visual-panel">
-        <div class="controls">
-          <p>Play music, then enable audio input.</p>
-          <button id="startButton">Enable Audio</button>
-          <p id="status">
-            Waiting for microphone access. Increase speaker volume so audio can
-            be captured.
-          </p>
+        <div class="scope-stage">
+          <div class="controls">
+            <p>Play music, then enable audio input.</p>
+            <button id="startButton">Enable Audio</button>
+            <p id="status">
+              Waiting for microphone access. Increase speaker volume so audio can
+              be captured.
+            </p>
+          </div>
+
+          <div class="mode-dock" aria-label="Oscilloscope mode">
+            <div class="mode-switch">
+              <button class="mode-btn active" data-mode="TIME">Time</button>
+              <button class="mode-btn" data-mode="LISSAJOUS">Lissajous</button>
+              <button class="mode-btn" data-mode="POLAR">Polar</button>
+            </div>
+          </div>
+
+          <div id="canvasHost"></div>
         </div>
-        <div id="canvasHost"></div>
+
+        <aside class="hud-panel" aria-label="Audio diagnostics">
+          <section class="hud-section">
+            <h2>Amplitude</h2>
+            <div class="hud-box hud-page-box">
+              <div class="meter-row">
+                <span>RMS</span>
+                <div class="meter-track">
+                  <div id="meterRms" class="meter-fill"></div>
+                </div>
+              </div>
+              <div class="meter-row">
+                <span>Low</span>
+                <div class="meter-track">
+                  <div id="meterLow" class="meter-fill"></div>
+                </div>
+              </div>
+              <div class="meter-row">
+                <span>Mid</span>
+                <div class="meter-track">
+                  <div id="meterMid" class="meter-fill"></div>
+                </div>
+              </div>
+              <div class="meter-row">
+                <span>High</span>
+                <div class="meter-track">
+                  <div id="meterHigh" class="meter-fill"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="hud-section">
+            <h2>Waveform</h2>
+            <div class="hud-box hud-page-box">
+              <canvas id="waveCanvas"></canvas>
+            </div>
+          </section>
+
+          <section class="hud-section">
+            <h2>Spectrum</h2>
+            <div class="hud-box hud-page-box">
+              <canvas id="spectrumCanvas"></canvas>
+            </div>
+          </section>
+
+          <section class="hud-section">
+            <h2>Detections</h2>
+            <div class="hud-box hud-stats hud-page-box">
+              <p class="beat-line">Beat Pulse: <span id="beatPulseDot" class="beat-pulse"></span></p>
+              <p id="onsetLine">Onset: --</p>
+              <p id="bpmLine">BPM: --</p>
+              <p id="peakLine">Peak: -- Hz</p>
+              <p id="dominantLine">Dominant: --</p>
+              <p id="centroidLine">Centroid: -- Hz</p>
+              <p id="rolloffLine">Rolloff (85%): -- Hz</p>
+              <p id="fluxLine">Flux: --</p>
+              <p id="bandsLine">Bands: L -- M -- H --</p>
+            </div>
+          </section>
+        </aside>
       </section>
     </main>
     <script src="sketch.js"></script>
