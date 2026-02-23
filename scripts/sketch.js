@@ -211,7 +211,7 @@ function drawHud(level, bassRaw, midRaw, trebleRaw, waveform, spectrum) {
   setMeter(hud.meterMid, midRaw / 255);
   setMeter(hud.meterHigh, trebleRaw / 255);
 
-  drawWaveformCanvas(hud.waveCanvas, waveform);
+  drawWaveformCanvas(hud.waveCanvas, waveform, level, bassRaw, midRaw, trebleRaw);
   drawSpectrumCanvas(hud.spectrumCanvas, spectrum);
   const featureState = updateDetectionText(level, bassRaw, midRaw, trebleRaw, spectrum);
   drawFluxCanvas(hud.fluxCanvas, featureState?.flux ?? 0);
@@ -237,7 +237,7 @@ function setupCanvas2D(canvas) {
   return { ctx, w, h };
 }
 
-function drawWaveformCanvas(canvas, waveform) {
+function drawWaveformCanvas(canvas, waveform, level, bassRaw, midRaw, trebleRaw) {
   const setup = setupCanvas2D(canvas);
   if (!setup) return;
   const { ctx, w, h } = setup;
@@ -256,9 +256,14 @@ function drawWaveformCanvas(canvas, waveform) {
   ctx.strokeStyle = "#1ed760";
   ctx.lineWidth = 2.2;
   ctx.beginPath();
+  const energyBoost = (bassRaw + midRaw + trebleRaw) / (255 * 3);
+  const gain = constrain(1.4 + (1 - constrain(level / 0.22, 0, 1)) * 2.0 + energyBoost * 0.9, 1.4, 3.6);
+  let smooth = 0;
   for (let i = 0; i < waveform.length; i++) {
     const x = (i / (waveform.length - 1)) * w;
-    const y = map(waveform[i], -1, 1, h * 0.9, h * 0.1);
+    const amplified = constrain(waveform[i] * gain, -1, 1);
+    smooth = i === 0 ? amplified : smooth * 0.65 + amplified * 0.35;
+    const y = map(smooth, -1, 1, h * 0.92, h * 0.08);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
