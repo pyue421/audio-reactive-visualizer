@@ -38,14 +38,18 @@ canvas {
 }
 
 h1 {
-  --text: #ffffff !important;
+  color: #ececec;
+  font-family: "monospace", monospace;
+  font-weight: 600;
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   letter-spacing: 0.02em;
 }
 
 p {
+  color: #ececec;
   margin: 0.5rem 0 0;
+  font-weight: 400;
   color: var(--muted);
   font-size: 0.9rem;
 }

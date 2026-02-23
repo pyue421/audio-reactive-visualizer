@@ -2,8 +2,7 @@
   position: relative;
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid var(--line);
-  background: #303030;
+  background: #1e1e1e;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 430px;
   gap: 0.7rem;
@@ -13,7 +12,6 @@
 .scope-stage {
   position: relative;
   min-height: calc(100vh - 4rem);
-  border: 1px solid rgba(30, 190, 170, 0.45);
   border-radius: 12px;
   overflow: hidden;
   background: #000;
@@ -43,7 +41,6 @@
   right: 0.8rem;
   z-index: 2;
   border-radius: 16px;
-  background: rgba(18, 19, 23, 0.92);
   padding: 0.3rem;
 }
 
@@ -57,9 +54,11 @@
   border: 0;
   border-radius: 999px;
   padding: 0.58rem 1.05rem;
-  background: #2a2c31;
+  background: #2a2a2a;
   color: #ececec;
-  font-size: 0.95rem;
+  font-family: "Inter", sans-serif;
+  font-weight: 300;
+  font-size: 1.2rem;
   line-height: 1;
 }
 

@@ -26,6 +26,7 @@ function setup() {
 
   initializeHud();
   initializeModeFromPage();
+  initializeModeControls();
   resetDetectors();
 
   enableMicrophone();
@@ -43,6 +44,34 @@ function initializeModeFromPage() {
   if (mode === "TIME" || mode === "LISSAJOUS" || mode === "POLAR") {
     currentMode = mode;
   }
+  syncModeButtons();
+}
+
+function initializeModeControls() {
+  const buttons = document.querySelectorAll(".mode-btn[data-mode]");
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const mode = (button.dataset.mode || "").toUpperCase();
+      setMode(mode);
+    });
+  });
+}
+
+function setMode(mode) {
+  if (mode !== "TIME" && mode !== "LISSAJOUS" && mode !== "POLAR") return;
+  currentMode = mode;
+  if (document.body) {
+    document.body.dataset.mode = mode;
+  }
+  syncModeButtons();
+}
+
+function syncModeButtons() {
+  const buttons = document.querySelectorAll(".mode-btn[data-mode]");
+  buttons.forEach((button) => {
+    const mode = (button.dataset.mode || "").toUpperCase();
+    button.classList.toggle("active", mode === currentMode);
+  });
 }
 
 async function enableMicrophone() {
@@ -51,7 +80,7 @@ async function enableMicrophone() {
   }
 
   if (micReady) {
-    playerStatusText().textContent = "Microphone already enabled.";
+    playerStatusText().textContent = "";
     return true;
   }
 
@@ -69,10 +98,9 @@ async function enableMicrophone() {
 
     fft.setInput(mic);
     amp.setInput(mic);
-    playerStatusText().textContent = "Microphone enabled.";
     return true;
   } catch {
-    playerStatusText().textContent = "Unable to enable microphone.";
+    playerStatusText().textContent = "";
     return false;
   }
 }
@@ -128,9 +156,8 @@ function drawOscilloscopeBackground() {
 }
 
 function drawOscilloscopeTrace(waveform, level, bassRaw, midRaw, trebleRaw) {
-  if (typeof window.renderModeTrace === "function") {
-    window.renderModeTrace(waveform, level, bassRaw, midRaw, trebleRaw);
-  }
+  const renderer = window.modeRenderers?.[currentMode];
+  if (typeof renderer === "function") renderer(waveform, level, bassRaw, midRaw, trebleRaw);
 }
 
 function drawScopeReadout(level, bass, mid, treble) {
@@ -152,6 +179,8 @@ function initializeHud() {
     meterHigh: document.getElementById("meterHigh"),
     waveCanvas: document.getElementById("waveCanvas"),
     spectrumCanvas: document.getElementById("spectrumCanvas"),
+    fluxCanvas: document.getElementById("fluxCanvas"),
+    bandsCanvas: document.getElementById("bandsCanvas"),
     beatPulseDot: document.getElementById("beatPulseDot"),
     onsetLine: document.getElementById("onsetLine"),
     bpmLine: document.getElementById("bpmLine"),
@@ -172,6 +201,7 @@ function resetDetectors() {
     beatIntervals: [],
     lastOnsetMs: -Infinity,
     beatPulseStrength: 0,
+    fluxTrend: [],
   };
 }
 
@@ -183,7 +213,9 @@ function drawHud(level, bassRaw, midRaw, trebleRaw, waveform, spectrum) {
 
   drawWaveformCanvas(hud.waveCanvas, waveform);
   drawSpectrumCanvas(hud.spectrumCanvas, spectrum);
-  updateDetectionText(level, bassRaw, midRaw, trebleRaw, spectrum);
+  const featureState = updateDetectionText(level, bassRaw, midRaw, trebleRaw, spectrum);
+  drawFluxCanvas(hud.fluxCanvas, featureState?.flux ?? 0);
+  drawBandsCanvas(hud.bandsCanvas, bassRaw / 255, midRaw / 255, trebleRaw / 255);
 }
 
 function setMeter(meterEl, value) {
@@ -259,6 +291,77 @@ function drawSpectrumCanvas(canvas, spectrum) {
   ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
 }
 
+function drawFluxCanvas(canvas, flux) {
+  const setup = setupCanvas2D(canvas);
+  if (!setup) return;
+  const { ctx, w, h } = setup;
+
+  detectionState.fluxTrend.push(flux);
+  if (detectionState.fluxTrend.length > 90) {
+    detectionState.fluxTrend.shift();
+  }
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = "rgba(29, 185, 84, 0.45)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.78);
+  ctx.lineTo(w, h * 0.78);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(30, 215, 96, 0.9)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < detectionState.fluxTrend.length; i++) {
+    const x = (i / Math.max(1, detectionState.fluxTrend.length - 1)) * w;
+    const y = h - map(detectionState.fluxTrend[i], 0, 2.6, h * 0.08, h * 0.88);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(29, 185, 84, 0.5)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+}
+
+function drawBandsCanvas(canvas, low, mid, high) {
+  const setup = setupCanvas2D(canvas);
+  if (!setup) return;
+  const { ctx, w, h } = setup;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+  ctx.fillRect(0, 0, w, h);
+
+  const labels = ["LOW", "MID", "HIGH"];
+  const values = [low, mid, high];
+  const gap = 12;
+  const leftPad = 36;
+  const barW = (w - leftPad - gap * 4) / 3;
+  const maxH = h - 24;
+
+  ctx.font = "11px monospace";
+  ctx.fillStyle = "rgba(30, 215, 96, 0.9)";
+  ctx.textAlign = "center";
+
+  for (let i = 0; i < 3; i++) {
+    const x = leftPad + gap + i * (barW + gap);
+    const barH = maxH * constrain(values[i], 0, 1);
+    ctx.fillStyle = "rgba(30, 215, 96, 0.86)";
+    ctx.fillRect(x, h - 14 - barH, barW, barH);
+    ctx.fillStyle = "rgba(30, 215, 96, 0.9)";
+    ctx.fillText(labels[i], x + barW * 0.5, h - 2);
+  }
+
+  ctx.strokeStyle = "rgba(29, 185, 84, 0.5)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+}
+
 function updateDetectionText(level, bassRaw, midRaw, trebleRaw, spectrum) {
   if (!hud.peakLine) return;
 
@@ -286,6 +389,7 @@ function updateDetectionText(level, bassRaw, midRaw, trebleRaw, spectrum) {
 
   detectionState.beatPulseStrength = max(0, detectionState.beatPulseStrength * 0.86 - 0.02);
   updateBeatDot(detectionState.beatPulseStrength);
+  return features;
 }
 
 function analyzeSpectrumFeatures(spectrum, nyquist) {

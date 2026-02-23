@@ -52,4 +52,5 @@ function renderModeTrace(waveform, level, bassRaw, midRaw, trebleRaw) {
   drawScopeReadout(level, bass, mid, treble);
 }
 
-window.renderModeTrace = renderModeTrace;
+window.modeRenderers = window.modeRenderers || {};
+window.modeRenderers.LISSAJOUS = renderModeTrace;
